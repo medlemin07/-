@@ -1,0 +1,18 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+:root { --road: repeating-linear-gradient(90deg,#C99A2E 0 14px,transparent 14px 28px); }
+body { background: #FBF8F0; color: #16231E; font-family: var(--f-body), sans-serif; }
+.dune { background:
+  radial-gradient(120% 80% at 100% 0%, #E9D8B0 0 45%, transparent 46%),
+  radial-gradient(90% 60% at 0% 100%, #E9D8B0cc 0 40%, transparent 41%), #FBF8F0; }
+.grain::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:.08; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='%23n'/%3E%3C/svg%3E"); }
+.ticket { --r: 14px;
+  -webkit-mask: radial-gradient(circle var(--r) at 0 38%, #0000 98%, #000) 0 0/51% 100% no-repeat,
+                radial-gradient(circle var(--r) at 100% 38%, #0000 98%, #000) 100% 0/51% 100% no-repeat; }
+.road { height: 6px; background: var(--road); }
+@keyframes issue { from { transform: translateY(-28px) rotate(-2deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes drive { from { background-position: 0 0 } to { background-position: -28px 0 } }
+.issue { animation: issue .9s cubic-bezier(.2,.9,.25,1) both; }
+.road { animation: drive 1.2s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .issue, .road { animation: none; } }
+:focus-visible { outline: 3px solid #C99A2E; outline-offset: 2px; }
