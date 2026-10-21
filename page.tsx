@@ -1,24 +1,45 @@
-import Link from "next/link";
-import { db, fmtTime, fmtDate } from "@/lib/supabase";
-import { Shell, btn, fld } from "../components";
-export default async function Agencies({ searchParams }: { searchParams: { q?: string } }) {
-  const q = (searchParams.q ?? "").trim().slice(0, 40);
-  const { data, error } = await db().rpc("list_agencies", { p_q: q });
-  const list: any[] = data ?? [];
+// يجلب المدن من Supabase إن كانت متغيرات البيئة مضبوطة، وإلا يعرض حقل نص حر.
+import { createClient } from "@supabase/supabase-js";
+async function cities(): Promise<string[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return [];
+  const { data } = await createClient(url, key).from("cities").select("name_ar").order("name_ar");
+  return (data ?? []).map((c) => c.name_ar);
+}
+const field = "w-full bg-transparent border-b-2 border-palm/30 py-2 text-lg focus:border-gold outline-none";
+export default async function Home() {
+  const list = await cities();
+  const today = new Date().toISOString().slice(0, 10);
+  const City = ({ name, label }: { name: string; label: string }) => (
+    <label className="block"><span className="text-sm text-palm/70">{label}</span>
+      {list.length ? <select name={name} required className={field}><option value="">اختر المدينة</option>{list.map((c) => <option key={c}>{c}</option>)}</select>
+        : <input name={name} required className={field} placeholder="اكتب اسم المدينة" />}
+    </label>);
   return (
-    <Shell demo={list.some((a) => a.is_demo)}>
-      <h1 className="font-display text-4xl text-palm">الوكالات المعتمدة</h1>
-      <form className="my-6 flex items-end gap-4"><label className="flex-1"><span className="text-sm">ابحث باسم الوكالة أو المدينة</span><input name="q" defaultValue={q} placeholder="مثال: روصو" className={fld} /></label><button className={btn}>بحث</button></form>
-      {error && <p className="border-2 border-dashed border-palm/30 p-6 text-center">تعذر تحميل الوكالات الآن. حاول مجددًا بعد قليل.</p>}
-      {!error && !list.length && <p className="border-2 border-dashed border-palm/30 p-8 text-center">لا توجد وكالات مطابقة{q ? ` لـ «${q}»` : ""}.</p>}
-      {list.map((a) => (
-        <div key={a.id} className="border-b border-palm/20 py-5">
-          <b className="font-display text-2xl text-palm">{a.name}</b>{a.is_demo && <span className="ms-2 border px-2 text-sm">تجريبية</span>}
-          {(a.address || a.phone) && <p className="mt-1 text-sm">{a.address} {a.phone && <span dir="ltr" className="ms-2">{a.phone}</span>}</p>}{a.notes && <p className="text-sm text-asphalt/70">{a.notes}</p>}
-          {a.routes.length ? <div className="mt-3 flex flex-wrap gap-2">{a.routes.map((r: any) => (
-            <Link key={r.f + r.t} className="bg-palm px-3 py-1 text-sm text-dune" href={`/search?${new URLSearchParams({ from: r.f, to: r.t, date: r.d.slice(0, 10), seats: "1" })}`}>
-              {r.f} ← {r.t} · أقرب رحلة {fmtDate(r.d)} {fmtTime(r.d)} · من {r.p} MRU</Link>))}</div>
-            : <p className="mt-2 text-sm text-asphalt/70">لا رحلات قادمة حاليًا.</p>}
-        </div>))}
-    </Shell>);
+    <main className="dune grain relative min-h-screen overflow-hidden">
+      <header className="mx-auto flex max-w-6xl items-center gap-3 px-6 py-6">
+        <img src="/logo.png" alt="شعار الإتحادية للنقل العمومي" width={46} height={46} className="rounded-full" />
+        <span className="font-display text-2xl text-palm">الإتحادية للنقل العمومي</span>
+        <nav className="me-auto flex gap-6 text-palm"><a href="/agencies">الوكالات</a><a href="/track">تتبع حجزي</a><a href="/login">دخول الوكالات</a></nav>
+      </header>
+      <section className="mx-auto grid max-w-6xl gap-10 px-6 pb-24 pt-10 md:grid-cols-[1.1fr_1fr] md:pt-20">
+        <div>
+          <h1 className="font-display text-5xl leading-[1.25] text-palm md:text-7xl">رحلتك القادمة<br/>تبدأ من هنا</h1>
+          <p className="mt-6 max-w-md text-lg leading-8 text-asphalt/80">قارن أسعار الوكالات المعتمدة بين المدن الموريتانية، واحجز مقعدك قبل أن تصل إلى المحطة.</p>
+          <div className="road mt-10 w-48 rounded-full" aria-hidden />
+        </div>
+        <form action="/search" className="issue ticket relative bg-paper shadow-[0_30px_60px_-25px_rgba(14,59,44,.55)] md:-rotate-1">
+          <div className="bg-palm px-7 py-4 font-display text-xl text-dune">تذكرة سفر</div>
+          <div className="space-y-6 px-7 py-7">
+            <City name="from" label="مدينة الانطلاق" /><City name="to" label="مدينة الوصول" />
+            <div className="grid grid-cols-2 gap-6">
+              <label className="block"><span className="text-sm text-palm/70">تاريخ السفر</span><input type="date" name="date" min={today} defaultValue={today} required className={field} /></label>
+              <label className="block"><span className="text-sm text-palm/70">عدد المسافرين</span><input type="number" name="seats" min={1} max={8} defaultValue={1} className={field} /></label>
+            </div>
+          </div>
+          <div className="mx-5 border-t-2 border-dashed border-palm/30" />
+          <div className="px-7 py-5"><button className="w-full rounded-sm bg-gold py-3 font-display text-xl text-asphalt transition active:translate-y-px">ابحث عن رحلة</button></div>
+        </form>
+      </section>
+    </main>);
 }
